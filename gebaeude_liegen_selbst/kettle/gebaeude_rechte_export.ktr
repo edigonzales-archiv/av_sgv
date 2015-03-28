@@ -325,8 +325,8 @@ http:&#47;&#47;type-exit.org&#47;adventures-with-open-source-bi&#47;2010&#47;06&
 , ST_Area(geometrie) as flaeche
 FROM av_sgv_work.gebaeude_rechte
 WHERE ST_Area(geometrie) &gt; 1.0
-AND bfsnr = 2601
-ORDER BY bfsnr, gb_gemnr, geb_id, nummer
+--AND bfsnr = 2601
+ORDER BY bfsnr, gb_gemnr, geb_id, nummer, art_geb
 --LIMIT 10
 </sql>
     <limit>0</limit>

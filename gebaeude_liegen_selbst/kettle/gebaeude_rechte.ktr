@@ -181,7 +181,7 @@
     <sql>SELECT
  DISTINCT bfsnr
 FROM av_mopublic.hoheitsgrenzen__gemeindegrenze
-WHERE bfsnr = 2601
+--WHERE bfsnr = 2601
 ORDER BY bfsnr
 --LIMIT 1
 </sql>
