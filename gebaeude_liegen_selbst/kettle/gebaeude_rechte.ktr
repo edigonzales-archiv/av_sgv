@@ -166,12 +166,12 @@
     </attributes>
   </connection>
   <order>
-  <hop> <from>Alle Gemeinden</from><to>BB Gebäude</to><enabled>Y</enabled> </hop>  </order>
+  <hop> <from>Alle Gemeinden</from><to>BB Gebäude</to><enabled>Y</enabled> </hop>  <hop> <from>Alle Gemeinden</from><to>BB Projektierte Gebäude</to><enabled>Y</enabled> </hop>  <hop> <from>Alle Gemeinden</from><to>EO Reservoir</to><enabled>Y</enabled> </hop>  <hop> <from>Alle Gemeinden</from><to>EO unterirdisches Gebäude</to><enabled>Y</enabled> </hop>  <hop> <from>Alle Gemeinden</from><to>EO Unterstand mit Adresse</to><enabled>Y</enabled> </hop>  </order>
   <step>
     <name>Alle Gemeinden</name>
     <type>TableInput</type>
     <description/>
-    <distribute>Y</distribute>
+    <distribute>N</distribute>
     <copies>1</copies>
          <partitioning>
            <method>none</method>
@@ -211,7 +211,7 @@ ORDER BY bfsnr
     <connection>xanadu2</connection>
     <execute_each_row>Y</execute_each_row>
     <replace_variables>Y</replace_variables>
-    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ?;
+    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ? AND art_geb = &apos;Gebaeude&apos;;
 
 INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art_recht, art_geb, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
 
@@ -257,8 +257,274 @@ WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sq
     </arguments>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>393</xloc>
-      <yloc>133</yloc>
+      <xloc>364</xloc>
+      <yloc>45</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>BB Projektierte Gebäude</name>
+    <type>ExecSQL</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>xanadu2</connection>
+    <execute_each_row>Y</execute_each_row>
+    <replace_variables>Y</replace_variables>
+    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ? AND art_geb = &apos;projektiertes_Gebaeude&apos;;
+
+INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art_recht, art_geb, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
+
+
+SELECT gebaeude.nummer, gebaeude.art, &apos;projektiertes_Gebaeude&apos;::varchar as art_geb, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
+FROM
+(
+ SELECT *
+ FROM
+ (
+  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_CollectionExtract(ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)),3) as geometrie
+  FROM
+  (
+   SELECT ogc_fid, geometrie
+   FROM av_mopublic.bodenbedeckung__projboflaeche
+   WHERE art = &apos;Gebaeude&apos;
+  AND bfsnr = ?
+  ) as bb,
+  (
+   SELECT *
+   FROM av_sgv_work.liegen_selbst_area
+   WHERE bfsnr = ?
+  ) as rechte
+  WHERE ST_Intersects(bb.geometrie, rechte.geometrie)
+ ) as a
+ WHERE geometrytype(geometrie) LIKE &apos;%POLYGON&apos;
+) as gebaeude, 
+(
+ SELECT *
+ FROM av_grundbuch.grundbuchkreise 
+ WHERE gem_bfs = ?
+) as kreise
+WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sql>
+    <insert_field/>
+    <update_field/>
+    <delete_field/>
+    <read_field/>
+    <arguments>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+    </arguments>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>649</xloc>
+      <yloc>134</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>EO Reservoir</name>
+    <type>ExecSQL</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>xanadu2</connection>
+    <execute_each_row>Y</execute_each_row>
+    <replace_variables>Y</replace_variables>
+    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ? AND art_geb = &apos;Reservoir&apos;;
+
+INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art_recht, art_geb, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
+
+
+SELECT gebaeude.nummer, gebaeude.art, &apos;Reservoir&apos;::varchar as art_geb, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
+FROM
+(
+ SELECT *
+ FROM
+ (
+  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_CollectionExtract(ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)),3) as geometrie
+  FROM
+  (
+   SELECT ogc_fid, geometrie
+   FROM av_mopublic.einzelobjekte__flaechenelement
+   WHERE typ = &apos;Reservoir&apos;
+  AND bfsnr = ?
+  ) as bb,
+  (
+   SELECT *
+   FROM av_sgv_work.liegen_selbst_area
+   WHERE bfsnr = ?
+  ) as rechte
+  WHERE ST_Intersects(bb.geometrie, rechte.geometrie)
+ ) as a
+ WHERE geometrytype(geometrie) LIKE &apos;%POLYGON&apos;
+) as gebaeude, 
+(
+ SELECT *
+ FROM av_grundbuch.grundbuchkreise 
+ WHERE gem_bfs = ?
+) as kreise
+WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sql>
+    <insert_field/>
+    <update_field/>
+    <delete_field/>
+    <read_field/>
+    <arguments>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+    </arguments>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>472</xloc>
+      <yloc>203</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>EO unterirdisches Gebäude</name>
+    <type>ExecSQL</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>xanadu2</connection>
+    <execute_each_row>Y</execute_each_row>
+    <replace_variables>Y</replace_variables>
+    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ? AND art_geb = &apos;unterirdisches_Gebaeude&apos;;
+
+INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art_recht, art_geb, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
+
+
+SELECT gebaeude.nummer, gebaeude.art, &apos;unterirdisches_Gebaeude&apos;::varchar as art_geb, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
+FROM
+(
+ SELECT *
+ FROM
+ (
+  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_CollectionExtract(ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)),3) as geometrie
+  FROM
+  (
+   SELECT ogc_fid, geometrie
+   FROM av_mopublic.einzelobjekte__flaechenelement
+   WHERE typ = &apos;unterirdisches_Gebaeude&apos;
+  AND bfsnr = ?
+  ) as bb,
+  (
+   SELECT *
+   FROM av_sgv_work.liegen_selbst_area
+   WHERE bfsnr = ?
+  ) as rechte
+  WHERE ST_Intersects(bb.geometrie, rechte.geometrie)
+ ) as a
+ WHERE geometrytype(geometrie) LIKE &apos;%POLYGON&apos;
+) as gebaeude, 
+(
+ SELECT *
+ FROM av_grundbuch.grundbuchkreise 
+ WHERE gem_bfs = ?
+) as kreise
+WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sql>
+    <insert_field/>
+    <update_field/>
+    <delete_field/>
+    <read_field/>
+    <arguments>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+    </arguments>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>361</xloc>
+      <yloc>294</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>EO Unterstand mit Adresse</name>
+    <type>ExecSQL</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>xanadu2</connection>
+    <execute_each_row>Y</execute_each_row>
+    <replace_variables>Y</replace_variables>
+    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ? AND art_geb = &apos;Unterstand&apos;;
+
+INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art_recht, art_geb, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
+
+
+SELECT gebaeude.nummer, gebaeude.art, &apos;Unterstand&apos;::varchar as art_geb, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
+FROM
+(
+ SELECT *
+ FROM
+ (
+  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_CollectionExtract(ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)),3) as geometrie
+  FROM
+  (
+   SELECT eo.ogc_fid, eo.geometrie
+   FROM av_mopublic.einzelobjekte__flaechenelement as eo, av_avdpool_ch.gebaeudeadressen_gebaeudeeingang as geb
+   WHERE geometrie &amp;&amp; lage
+   AND eo.bfsnr = ? 
+   AND geb.gem_bfs = ?
+   AND typ = &apos;Unterstand&apos;
+   AND geb.im_gebaeude_txt = &apos;EO&apos;
+   AND (geb.hoehenlage IS NULL)
+   AND ST_Within(lage, geometrie)
+  ) as bb,
+  (
+   SELECT *
+   FROM av_sgv_work.liegen_selbst_area
+   WHERE bfsnr = ?
+  ) as rechte
+  WHERE ST_Intersects(bb.geometrie, rechte.geometrie)
+ ) as a
+ WHERE geometrytype(geometrie) LIKE &apos;%POLYGON&apos;
+) as gebaeude, 
+(
+ SELECT *
+ FROM av_grundbuch.grundbuchkreise 
+ WHERE gem_bfs = ?
+) as kreise
+WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sql>
+    <insert_field/>
+    <update_field/>
+    <delete_field/>
+    <read_field/>
+    <arguments>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+    </arguments>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>141</xloc>
+      <yloc>318</yloc>
       <draw>Y</draw>
       </GUI>
     </step>
