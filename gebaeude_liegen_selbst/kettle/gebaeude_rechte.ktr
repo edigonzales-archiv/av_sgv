@@ -166,7 +166,7 @@
     </attributes>
   </connection>
   <order>
-  <hop> <from>Alle Gemeinden</from><to>Execute SQL script</to><enabled>Y</enabled> </hop>  </order>
+  <hop> <from>Alle Gemeinden</from><to>BB Gebäude</to><enabled>Y</enabled> </hop>  </order>
   <step>
     <name>Alle Gemeinden</name>
     <type>TableInput</type>
@@ -181,6 +181,7 @@
     <sql>SELECT
  DISTINCT bfsnr
 FROM av_mopublic.hoheitsgrenzen__gemeindegrenze
+WHERE bfsnr = 2601
 ORDER BY bfsnr
 --LIMIT 1
 </sql>
@@ -198,7 +199,7 @@ ORDER BY bfsnr
     </step>
 
   <step>
-    <name>Execute SQL script</name>
+    <name>BB Gebäude</name>
     <type>ExecSQL</type>
     <description/>
     <distribute>Y</distribute>
@@ -212,16 +213,16 @@ ORDER BY bfsnr
     <replace_variables>Y</replace_variables>
     <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ?;
 
-INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
+INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art_recht, art_geb, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
 
 
-SELECT gebaeude.nummer, gebaeude.art, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
+SELECT gebaeude.nummer, gebaeude.art, &apos;Gebaeude&apos;::varchar as art_geb, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
 FROM
 (
  SELECT *
  FROM
  (
-  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)) as geometrie
+  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_CollectionExtract(ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)),3) as geometrie
   FROM
   (
    SELECT ogc_fid, geometrie
@@ -256,7 +257,7 @@ WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sq
     </arguments>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>392</xloc>
+      <xloc>393</xloc>
       <yloc>133</yloc>
       <draw>Y</draw>
       </GUI>
