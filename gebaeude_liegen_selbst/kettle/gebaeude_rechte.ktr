@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>liegen_selbst_area</name>
+    <name>gebaeude_rechte</name>
     <description/>
     <extended_description/>
     <trans_version/>
+    <trans_status>0</trans_status>
     <directory>&#47;</directory>
     <parameters>
     </parameters>
@@ -32,7 +33,7 @@
     <size_rowset>10000</size_rowset>
     <sleep_time_empty>50</sleep_time_empty>
     <sleep_time_full>50</sleep_time_full>
-    <unique_connections>N</unique_connections>
+    <unique_connections>Y</unique_connections>
     <feedback_shown>Y</feedback_shown>
     <feedback_size>50000</feedback_size>
     <using_thread_priorities>Y</using_thread_priorities>
@@ -48,34 +49,9 @@
     <clusterschemas>
     </clusterschemas>
   <modified_user>-</modified_user>
-  <modified_date>2014&#47;12&#47;21 18:04:05.670</modified_date>
+  <modified_date>2014&#47;12&#47;23 16:05:15.679</modified_date>
   </info>
   <notepads>
-    <notepad>
-      <note>Es werden Multipolygon draus gemacht. Nicht unbedingt wegen den Selbstrechten 
-sondern wegen den Liegenschaften. Falls ein Selbstrecht eine Liegenschaft halbiert,
-entstehen dann beim Union Multipolygone.
-
-Falls das Probleme verursacht, kann ein &quot;Polygon&quot;-Approach probiert werden:
-
-SELECT art, nummer, nbident, ST_Union(geometrie) as geometrie
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = 2529
-AND art = &apos;selbst&apos;
-GROUP BY nummer, nbident, art, bfsnr
-
-UNION
-
-SELECT art, nummer, nbident, geometrie
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = 2529
-AND art = &apos;liegen&apos;
-</note>
-      <xloc>309</xloc>
-      <yloc>288</yloc>
-      <width>471</width>
-      <heigth>257</heigth>
-    </notepad>
   </notepads>
   <connection>
     <name>rosebud2</name>
@@ -190,7 +166,7 @@ AND art = &apos;liegen&apos;
     </attributes>
   </connection>
   <order>
-  <hop> <from>Alle Gemeinden</from><to>Union alle verschnittenen Selbstrechte</to><enabled>Y</enabled> </hop>  </order>
+  <hop> <from>Alle Gemeinden</from><to>Execute SQL script</to><enabled>Y</enabled> </hop>  </order>
   <step>
     <name>Alle Gemeinden</name>
     <type>TableInput</type>
@@ -205,7 +181,6 @@ AND art = &apos;liegen&apos;
     <sql>SELECT
  DISTINCT bfsnr
 FROM av_mopublic.hoheitsgrenzen__gemeindegrenze
-WHERE bfsnr = 2529
 ORDER BY bfsnr
 --LIMIT 1
 </sql>
@@ -216,14 +191,14 @@ ORDER BY bfsnr
     <lazy_conversion_active>N</lazy_conversion_active>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>353</xloc>
-      <yloc>161</yloc>
+      <xloc>154</xloc>
+      <yloc>134</yloc>
       <draw>Y</draw>
       </GUI>
     </step>
 
   <step>
-    <name>Union alle verschnittenen Selbstrechte</name>
+    <name>Execute SQL script</name>
     <type>ExecSQL</type>
     <description/>
     <distribute>Y</distribute>
@@ -235,13 +210,40 @@ ORDER BY bfsnr
     <connection>xanadu2</connection>
     <execute_each_row>Y</execute_each_row>
     <replace_variables>Y</replace_variables>
-    <sql>DELETE FROM av_sgv_work.liegen_selbst_area WHERE bfsnr = ?;
+    <sql>DELETE FROM av_sgv_work.gebaeude_rechte WHERE bfsnr = ?;
 
-INSERT INTO av_sgv_work.liegen_selbst_area (nbident, nummer, geometrie, art, bfsnr)
-SELECT nbident, nummer, ST_Multi(ST_Union(geometrie)) as geometrie, art, bfsnr
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = ?
-GROUP BY nummer, nbident, art, bfsnr</sql>
+INSERT INTO av_sgv_work.gebaeude_rechte (nummer, art, nbident, bfsnr, geb_id, geometrie, grundbuch, gemeinde, gb_gemnr)
+
+
+SELECT gebaeude.nummer, gebaeude.art, gebaeude.nbident, gebaeude.bfsnr, gebaeude.geb_id, gebaeude.geometrie, kreise.grundbuch, kreise.gemeinde, kreise.gb_gemnr
+FROM
+(
+ SELECT *
+ FROM
+ (
+  SELECT rechte.nummer, rechte.art, rechte.nbident, rechte.bfsnr, bb.ogc_fid as geb_id, ST_Multi(ST_Intersection(bb.geometrie, rechte.geometrie)) as geometrie
+  FROM
+  (
+   SELECT ogc_fid, geometrie
+   FROM av_mopublic.bodenbedeckung__boflaeche
+   WHERE art = &apos;Gebaeude&apos;
+  AND bfsnr = ?
+  ) as bb,
+  (
+   SELECT *
+   FROM av_sgv_work.liegen_selbst_area
+   WHERE bfsnr = ?
+  ) as rechte
+  WHERE ST_Intersects(bb.geometrie, rechte.geometrie)
+ ) as a
+ WHERE geometrytype(geometrie) LIKE &apos;%POLYGON&apos;
+) as gebaeude, 
+(
+ SELECT *
+ FROM av_grundbuch.grundbuchkreise 
+ WHERE gem_bfs = ?
+) as kreise
+WHERE ST_Within(ST_PointOnSurface(gebaeude.geometrie), kreise.wkb_geometry);</sql>
     <insert_field/>
     <update_field/>
     <delete_field/>
@@ -249,11 +251,13 @@ GROUP BY nummer, nbident, art, bfsnr</sql>
     <arguments>
        <argument><name>bfsnr</name></argument>
        <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
+       <argument><name>bfsnr</name></argument>
     </arguments>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>605</xloc>
-      <yloc>158</yloc>
+      <xloc>392</xloc>
+      <yloc>133</yloc>
       <draw>Y</draw>
       </GUI>
     </step>

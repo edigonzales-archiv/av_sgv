@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>liegen_selbst_area</name>
+    <name>gebaeude_rechte_export</name>
     <description/>
     <extended_description/>
     <trans_version/>
@@ -48,33 +48,23 @@
     <clusterschemas>
     </clusterschemas>
   <modified_user>-</modified_user>
-  <modified_date>2014&#47;12&#47;21 18:04:05.670</modified_date>
+  <modified_date>2014&#47;12&#47;23 16:24:14.901</modified_date>
   </info>
   <notepads>
     <notepad>
-      <note>Es werden Multipolygon draus gemacht. Nicht unbedingt wegen den Selbstrechten 
-sondern wegen den Liegenschaften. Falls ein Selbstrecht eine Liegenschaft halbiert,
-entstehen dann beim Union Multipolygone.
-
-Falls das Probleme verursacht, kann ein &quot;Polygon&quot;-Approach probiert werden:
-
-SELECT art, nummer, nbident, ST_Union(geometrie) as geometrie
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = 2529
-AND art = &apos;selbst&apos;
-GROUP BY nummer, nbident, art, bfsnr
-
-UNION
-
-SELECT art, nummer, nbident, geometrie
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = 2529
-AND art = &apos;liegen&apos;
-</note>
-      <xloc>309</xloc>
-      <yloc>288</yloc>
-      <width>471</width>
-      <heigth>257</heigth>
+      <note>ST_Area(geometrie) &gt; 1.0</note>
+      <xloc>98</xloc>
+      <yloc>230</yloc>
+      <width>150</width>
+      <heigth>23</heigth>
+    </notepad>
+    <notepad>
+      <note>Gemeindeweise: 
+http:&#47;&#47;type-exit.org&#47;adventures-with-open-source-bi&#47;2010&#47;06&#47;run-kettle-job-for-each-row&#47;</note>
+      <xloc>586</xloc>
+      <yloc>127</yloc>
+      <width>498</width>
+      <heigth>36</heigth>
     </notepad>
   </notepads>
   <connection>
@@ -190,12 +180,12 @@ AND art = &apos;liegen&apos;
     </attributes>
   </connection>
   <order>
-  <hop> <from>Alle Gemeinden</from><to>Union alle verschnittenen Selbstrechte</to><enabled>Y</enabled> </hop>  </order>
+  <hop> <from>Table input</from><to>Shapefile File Output</to><enabled>Y</enabled> </hop>  <hop> <from>Table input</from><to>Excel Output</to><enabled>Y</enabled> </hop>  </order>
   <step>
-    <name>Alle Gemeinden</name>
+    <name>Table input</name>
     <type>TableInput</type>
     <description/>
-    <distribute>Y</distribute>
+    <distribute>N</distribute>
     <copies>1</copies>
          <partitioning>
            <method>none</method>
@@ -203,11 +193,21 @@ AND art = &apos;liegen&apos;
            </partitioning>
     <connection>xanadu2</connection>
     <sql>SELECT
- DISTINCT bfsnr
-FROM av_mopublic.hoheitsgrenzen__gemeindegrenze
-WHERE bfsnr = 2529
-ORDER BY bfsnr
---LIMIT 1
+  ogc_fid
+, nummer
+, nbident
+, art
+, bfsnr
+, geb_id
+, geometrie
+, grundbuch
+, gemeinde
+, gb_gemnr
+, ST_Area(geometrie) as flaeche
+FROM av_sgv_work.gebaeude_rechte
+WHERE ST_Area(geometrie) &gt; 1.0
+ORDER BY bfsnr, gb_gemnr, geb_id, nummer
+--LIMIT 10
 </sql>
     <limit>0</limit>
     <lookup/>
@@ -216,15 +216,15 @@ ORDER BY bfsnr
     <lazy_conversion_active>N</lazy_conversion_active>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>353</xloc>
-      <yloc>161</yloc>
+      <xloc>163</xloc>
+      <yloc>117</yloc>
       <draw>Y</draw>
       </GUI>
     </step>
 
   <step>
-    <name>Union alle verschnittenen Selbstrechte</name>
-    <type>ExecSQL</type>
+    <name>Shapefile File Output</name>
+    <type>GISFileOutput</type>
     <description/>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -232,28 +232,110 @@ ORDER BY bfsnr
            <method>none</method>
            <schema_name/>
            </partitioning>
-    <connection>xanadu2</connection>
-    <execute_each_row>Y</execute_each_row>
-    <replace_variables>Y</replace_variables>
-    <sql>DELETE FROM av_sgv_work.liegen_selbst_area WHERE bfsnr = ?;
-
-INSERT INTO av_sgv_work.liegen_selbst_area (nbident, nummer, geometrie, art, bfsnr)
-SELECT nbident, nummer, ST_Multi(ST_Union(geometrie)) as geometrie, art, bfsnr
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = ?
-GROUP BY nummer, nbident, art, bfsnr</sql>
-    <insert_field/>
-    <update_field/>
-    <delete_field/>
-    <read_field/>
-    <arguments>
-       <argument><name>bfsnr</name></argument>
-       <argument><name>bfsnr</name></argument>
-    </arguments>
+    <filename>&#47;home&#47;stefan&#47;tmp&#47;sgv_gebaeude_rechte.shp</filename>
+    <isfilenameinfield>N</isfilenameinfield>
+    <filenamefield/>
+    <gis_file_charset>UTF-8</gis_file_charset>
+    <accept_stepname/>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>605</xloc>
-      <yloc>158</yloc>
+      <xloc>495</xloc>
+      <yloc>49</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>Excel Output</name>
+    <type>ExcelOutput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <header>Y</header>
+    <footer>N</footer>
+    <encoding/>
+    <append>N</append>
+    <add_to_result_filenames>Y</add_to_result_filenames>
+    <file>
+      <name>&#47;home&#47;stefan&#47;tmp&#47;sgv_gebaeude_rechte</name>
+      <extention>xls</extention>
+      <do_not_open_newfile_init>N</do_not_open_newfile_init>
+      <split>N</split>
+      <add_date>N</add_date>
+      <add_time>N</add_time>
+      <SpecifyFormat>N</SpecifyFormat>
+      <date_time_format/>
+      <sheetname>Sheet1</sheetname>
+      <autosizecolums>N</autosizecolums>
+      <protect_sheet>N</protect_sheet>
+      <password>Encrypted </password>
+      <splitevery>50000</splitevery>
+      </file>
+    <template>
+      <enabled>N</enabled>
+      <append>N</append>
+      <filename>template.xls</filename>
+    </template>
+    <fields>
+      <field>
+        <name>ogc_fid</name>
+        <type>Integer</type>
+        <format>#</format>
+      </field>
+      <field>
+        <name>nummer</name>
+        <type>String</type>
+        <format/>
+      </field>
+      <field>
+        <name>nbident</name>
+        <type>String</type>
+        <format/>
+      </field>
+      <field>
+        <name>art</name>
+        <type>String</type>
+        <format/>
+      </field>
+      <field>
+        <name>bfsnr</name>
+        <type>Integer</type>
+        <format>#</format>
+      </field>
+      <field>
+        <name>geb_id</name>
+        <type>Integer</type>
+        <format>#</format>
+      </field>
+      <field>
+        <name>grundbuch</name>
+        <type>String</type>
+        <format/>
+      </field>
+      <field>
+        <name>gemeinde</name>
+        <type>String</type>
+        <format/>
+      </field>
+      <field>
+        <name>gb_gemnr</name>
+        <type>Integer</type>
+        <format>#</format>
+      </field>
+      <field>
+        <name>flaeche</name>
+        <type>Number</type>
+        <format>#</format>
+      </field>
+    </fields>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>490</xloc>
+      <yloc>175</yloc>
       <draw>Y</draw>
       </GUI>
     </step>

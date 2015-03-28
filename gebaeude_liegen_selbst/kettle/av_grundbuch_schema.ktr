@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>liegen_selbst_area</name>
+    <name>av_grundbuch_schema</name>
     <description/>
     <extended_description/>
     <trans_version/>
@@ -48,34 +48,9 @@
     <clusterschemas>
     </clusterschemas>
   <modified_user>-</modified_user>
-  <modified_date>2014&#47;12&#47;21 18:04:05.670</modified_date>
+  <modified_date>2014&#47;12&#47;23 15:27:28.051</modified_date>
   </info>
   <notepads>
-    <notepad>
-      <note>Es werden Multipolygon draus gemacht. Nicht unbedingt wegen den Selbstrechten 
-sondern wegen den Liegenschaften. Falls ein Selbstrecht eine Liegenschaft halbiert,
-entstehen dann beim Union Multipolygone.
-
-Falls das Probleme verursacht, kann ein &quot;Polygon&quot;-Approach probiert werden:
-
-SELECT art, nummer, nbident, ST_Union(geometrie) as geometrie
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = 2529
-AND art = &apos;selbst&apos;
-GROUP BY nummer, nbident, art, bfsnr
-
-UNION
-
-SELECT art, nummer, nbident, geometrie
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = 2529
-AND art = &apos;liegen&apos;
-</note>
-      <xloc>309</xloc>
-      <yloc>288</yloc>
-      <width>471</width>
-      <heigth>257</heigth>
-    </notepad>
   </notepads>
   <connection>
     <name>rosebud2</name>
@@ -190,9 +165,9 @@ AND art = &apos;liegen&apos;
     </attributes>
   </connection>
   <order>
-  <hop> <from>Alle Gemeinden</from><to>Union alle verschnittenen Selbstrechte</to><enabled>Y</enabled> </hop>  </order>
+  <hop> <from>grundbuch_art</from><to>grundbuch_art (xanadu2)</to><enabled>Y</enabled> </hop>  <hop> <from>grundbuchkreis_herkunft</from><to>grundbuchkreis_herkunft (xanadu2)</to><enabled>Y</enabled> </hop>  <hop> <from>grundbuchkreise</from><to>grundbuchkreise (xanadu2)</to><enabled>Y</enabled> </hop>  </order>
   <step>
-    <name>Alle Gemeinden</name>
+    <name>grundbuch_art</name>
     <type>TableInput</type>
     <description/>
     <distribute>Y</distribute>
@@ -201,13 +176,12 @@ AND art = &apos;liegen&apos;
            <method>none</method>
            <schema_name/>
            </partitioning>
-    <connection>xanadu2</connection>
+    <connection>rosebud2</connection>
     <sql>SELECT
- DISTINCT bfsnr
-FROM av_mopublic.hoheitsgrenzen__gemeindegrenze
-WHERE bfsnr = 2529
-ORDER BY bfsnr
---LIMIT 1
+  ogc_fid
+, art
+, art_txt
+FROM av_grundbuch.grundbuch_art
 </sql>
     <limit>0</limit>
     <lookup/>
@@ -216,15 +190,15 @@ ORDER BY bfsnr
     <lazy_conversion_active>N</lazy_conversion_active>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>353</xloc>
-      <yloc>161</yloc>
+      <xloc>86</xloc>
+      <yloc>78</yloc>
       <draw>Y</draw>
       </GUI>
     </step>
 
   <step>
-    <name>Union alle verschnittenen Selbstrechte</name>
-    <type>ExecSQL</type>
+    <name>grundbuch_art (xanadu2)</name>
+    <type>TableOutput</type>
     <description/>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -233,27 +207,221 @@ ORDER BY bfsnr
            <schema_name/>
            </partitioning>
     <connection>xanadu2</connection>
-    <execute_each_row>Y</execute_each_row>
-    <replace_variables>Y</replace_variables>
-    <sql>DELETE FROM av_sgv_work.liegen_selbst_area WHERE bfsnr = ?;
-
-INSERT INTO av_sgv_work.liegen_selbst_area (nbident, nummer, geometrie, art, bfsnr)
-SELECT nbident, nummer, ST_Multi(ST_Union(geometrie)) as geometrie, art, bfsnr
-FROM av_sgv_work.liegen_selbst_area_parts
-WHERE bfsnr = ?
-GROUP BY nummer, nbident, art, bfsnr</sql>
-    <insert_field/>
-    <update_field/>
-    <delete_field/>
-    <read_field/>
-    <arguments>
-       <argument><name>bfsnr</name></argument>
-       <argument><name>bfsnr</name></argument>
-    </arguments>
+    <schema>av_grundbuch</schema>
+    <table>grundbuch_art</table>
+    <commit>1000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>Y</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>Y</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>Y</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
+    <fields>
+        <field>
+          <column_name>art</column_name>
+          <stream_name>art</stream_name>
+        </field>
+        <field>
+          <column_name>art_txt</column_name>
+          <stream_name>art_txt</stream_name>
+        </field>
+    </fields>
      <cluster_schema/>
  <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
-      <xloc>605</xloc>
-      <yloc>158</yloc>
+      <xloc>363</xloc>
+      <yloc>80</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>grundbuchkreis_herkunft (xanadu2)</name>
+    <type>TableOutput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>xanadu2</connection>
+    <schema>av_grundbuch</schema>
+    <table>grundbuchkreis_herkunft</table>
+    <commit>1000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>Y</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>Y</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>Y</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
+    <fields>
+        <field>
+          <column_name>art</column_name>
+          <stream_name>art</stream_name>
+        </field>
+        <field>
+          <column_name>art_txt</column_name>
+          <stream_name>art_txt</stream_name>
+        </field>
+    </fields>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>375</xloc>
+      <yloc>220</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>grundbuchkreis_herkunft</name>
+    <type>TableInput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>rosebud2</connection>
+    <sql>SELECT
+  ogc_fid
+, art
+, art_txt
+FROM av_grundbuch.grundbuchkreis_herkunft
+</sql>
+    <limit>0</limit>
+    <lookup/>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>N</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>74</xloc>
+      <yloc>226</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>grundbuchkreise</name>
+    <type>TableInput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>rosebud2</connection>
+    <sql>SELECT
+  ogc_fid
+, grundbuch
+, gemeinde
+, gem_bfs
+, gb_art
+, gb_kreis_herkunft
+, nbident
+, bemerkungen
+, wkb_geometry
+, gb_gemnr
+FROM av_grundbuch.grundbuchkreise
+</sql>
+    <limit>0</limit>
+    <lookup/>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>N</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>72</xloc>
+      <yloc>330</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>grundbuchkreise (xanadu2)</name>
+    <type>TableOutput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>xanadu2</connection>
+    <schema>av_grundbuch</schema>
+    <table>grundbuchkreise</table>
+    <commit>1000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>Y</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>Y</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>Y</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
+    <fields>
+        <field>
+          <column_name>grundbuch</column_name>
+          <stream_name>grundbuch</stream_name>
+        </field>
+        <field>
+          <column_name>gemeinde</column_name>
+          <stream_name>gemeinde</stream_name>
+        </field>
+        <field>
+          <column_name>gem_bfs</column_name>
+          <stream_name>gem_bfs</stream_name>
+        </field>
+        <field>
+          <column_name>gb_art</column_name>
+          <stream_name>gb_art</stream_name>
+        </field>
+        <field>
+          <column_name>gb_kreis_herkunft</column_name>
+          <stream_name>gb_kreis_herkunft</stream_name>
+        </field>
+        <field>
+          <column_name>nbident</column_name>
+          <stream_name>nbident</stream_name>
+        </field>
+        <field>
+          <column_name>bemerkungen</column_name>
+          <stream_name>bemerkungen</stream_name>
+        </field>
+        <field>
+          <column_name>wkb_geometry</column_name>
+          <stream_name>wkb_geometry</stream_name>
+        </field>
+        <field>
+          <column_name>gb_gemnr</column_name>
+          <stream_name>gb_gemnr</stream_name>
+        </field>
+    </fields>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>393</xloc>
+      <yloc>341</yloc>
       <draw>Y</draw>
       </GUI>
     </step>
